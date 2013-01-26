@@ -299,8 +299,14 @@ module ActsAsTaggableOn::Taggable
 
       def reload(*args)
         self.class.tag_types.each do |context|
-          instance_variable_set("@#{context.to_s.singularize}_list", nil)
-          instance_variable_set("@all_#{context.to_s.singularize}_list", nil)
+          # Calling reload in another after_save hook that happens prior
+          # to #save_tags getting called results in the loss of assigned tags.
+          # Crude attempt at fixing that issue follows...
+          attrib = "#{context.to_s.singularize}_list"
+          unless changed_attributes.include?(attrib)
+            instance_variable_set("@#{context.to_s.singularize}_list", nil)
+            instance_variable_set("@all_#{context.to_s.singularize}_list", nil)
+          end
         end
 
         super(*args)
